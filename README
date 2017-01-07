@@ -1,0 +1,90 @@
+ingest is an application that will capture source changes.  It will look for 
+any regular files below a "source" directory, which is passed in as a command
+line argument.  If the application detects that the file has not previously
+been tracked or the MD5 checksum of the file is different than any other 
+version of that file, the application will copy that file to an output 
+directory (also specified as a command line argument).  
+
+In the case that the file has never been seen before, the file will be copied 
+to the output directory without a name modification.  In the case that the 
+file has been seen before but the MD5 checksum is different than any other 
+tracked version of that file, the file will be copied to the output directory
+with a build_id appended to the file name.
+
+The Usage statement for injest would be as follows:
+Uasge:   ingest config.xml prefix source output build_id
+Example: ingest my_project.xml /vobs/project source my_new_or_different 17005
+
+The example above assumes that you have a configuration file called 
+"my_project.xml" in your current directory.  It also assumes that you have a 
+directory named "source" in your current working directory which has all of 
+the files you want checked.  You probably have a source code repository that
+has a directory /vobs/project/source which contains all of the files in the 
+"source" directory on your local machine.
+
+If the ingest executable found file source/blah_new.txt and it has never seen 
+this file before, it will create the file my_new_or_different/blah_new.txt.
+It will also create a transaction record indicating a new file, but more about 
+that later.
+
+If the ingest executable found file source/blah_seen_before.txt, and the MD5 
+checksum is different than any version ever seen so far, it will create file
+my_new_or_different/blah_seen_before.txt.17005.  Note that the "17005" 
+build_id indicates that we first discovered this version of the file somewhere
+under the source directory January 5, 2017.  
+
+You should take this file back and put it into your source code repository 
+since we have never seen this filename/MD5 combination before.  The 
+application will also create a transaction record indicating that we found a
+new version of this tracked file.
+
+If the ingest application has seen the file before and the MD5 checksum is 
+identical to what we have seen before, nothing happens.
+
+At the end of the ingest run, only new or changed files will be under the 
+my_new_or_different directory.  All of these files will probably need to 
+be put into your source code repository since they are new or changed.
+
+The repository will be massive.  Rather than saving only the differences 
+between files, it is going to store the complete file with 0 or more 
+build_ids appended to the file name.  Since this repository will eventually 
+become unmanageable, only GDBM files will be created to represent the files 
+and their versions within the repository.  The GDBM files are listed below 
+referenced by their placeholder names.
+
+GNUDB Files
+1.  IGNORE:  This key value pair tracks all of the files we specifically want 
+    to ommit from the repository.  For example, there may be a password file 
+    you never want to pick up.  If you put the fully qualified name of the 
+    file into the GDBM as the key and a hard coded 1 as the value, when ingest
+    sees this file, it will igniore it and not check it further.
+2.  TRACKED: This Key value pair file tells us if we currently have the file 
+    in our repository.  In each case, the key is the prefix + fully qualified
+    name (FQN) and the value is a hardcoded 1.  
+3.  MD5:  This key value pair tracks all of the MD5 checksums within the 
+    repository.  The key is the 32 hex character MD5 while the value is the 
+    prefix+FQN with an appended build_id if appropriate.
+
+Within the config.xml file, there will wildcard ignore entries.  If you do 
+not want to ever pickup any *.bmp or *.img files for example, you may set up
+a rule to ignore any files matching a regular expression.  When the ingest 
+application starts processing files, it first considers the reqular 
+expressions from the configuration XML file.  Then it will start checking 
+the files against the database GDBM files.  Assuming a file being processed by
+ingest does not match the file name against any reqular expression, it first
+checks the filename prefix+FQN against the IGNORE database.  If the filename
+is identified as one to ignore, except for a log entry, no further processing 
+is done.  Assuming the prefix+FQN is not found in IGNORE, ingest will next 
+check the prefix+FQN against the TRACKED db.  If the file is not currently 
+being tracked, a transaction log will be written to include the file within 
+the repository.  The MD5 checksum will be computed and transaction entries 
+will be generated to add the file to the TRACKED db and to add the MD5 
+checksum to the MD5 db.  Finally, the filename will be copied to the output
+directory which was passsed in as a command line argument.
+
+It is extremely important to keep the database files synchronized with the 
+actual repository.  For this reason, updates to the database files are done 
+pseudo manually at the end of an ingest cycle.  As mentioned before, 
+everything creates a transaction record.  It is the processing of these 
+transaction records that actually updates the database files.
+
