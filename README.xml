@@ -1,0 +1,86 @@
+All logging from the ingest application is done with XML records.  Initially
+nothing from an ingest cycle run will be done to either put source into the 
+repository or to update the GNUDB database files.  These actions will be 
+done after the cycle has run so that the user gets one more chance to 
+approve the operations before they can no longer be undone.
+
+The logging from an ingest cycle will all be encapsulated within an <ingest>
+node.  All child elements of a cycle will be of type <query>.  <query> 
+elements will always contain a single <response child and 0 or more 
+<operation> elements.  
+
+An example XML document for an ingest cycle is as shown below:
+<ingest DTS="2017007164132" build_id="R000.1">
+  <!-- 
+     This transaction would indicate that the file 
+     /blah/blah/blah/blah.c is currently in the TRACKED database but 
+     we did not find the MD5 checksum.  Ingest is recommending two 
+     operations for this file.  The first is to update the MD5 database
+     to associate key 6fb48e9ace24834ee1933ce7bfe54353 with value
+     /blah/blah/blah/blah.c.R000.1.  The second operation is to copy
+     .../blah/blah.c to the repository staging area as 
+     .../blah/blah.c.R000.1 is    
+  -->
+  <query type="plain" directory="/blah/blah/blah" file="blah.c" 
+     MD5="6fb48e9ace24834ee1933ce7bfe54353" check="standard" 
+     reflect="whatever" >
+    <response reflect="whatever" type="modified" \>
+    <operation type="database" database="MD5"  
+       directory="/blah/blah/blah" file="blah.c" build_id="R000.1" 
+       MD5="6fb48e9ace24834ee1933ce7bfe54353" action="add" \>
+    <operation type="repository" reflect="whatever" 
+       directory="/blah/blah/blah" file="blah.c" 
+       action="promote" \>
+  </query>
+
+  <!-- 
+     This transaction would indicate that the file 
+     /blah/blah/blah/blah.pl is new and not included in the repository.
+     Ingest is recommending three operations for this file.  The first is to 
+     update the MD5 database to associate key 
+     8207249b1ff00d3198d22279a638c6b4 with value
+     /blah/blah/blah/blah.pl.  The second operation is to copy
+     .../blah/blah.pl to the repository staging area as 
+     .../blah/blah.pl.  The last is to add /blah/blah/blah/blah.pl to the 
+     TRACKED database.      
+  -->
+  <query type="plain" directory="/blah/blah/blah" file="blah.pl" 
+     MD5="8207249b1ff00d3198d22279a638c6b4" check="standard" 
+     reflect="whatever" >
+    <response reflect="whatever" type="NEW" \>
+    <operation type="database" database="MD5" 
+       directory="/blah/blah/blah" file="blah.pl" build_id="" 
+       MD5="8207249b1ff00d3198d22279a638c6b4" action="add" \>
+    <operation type="database" database="TRACKED" 
+       directory="/blah/blah/blah" file="blah.pl" action="add" \>
+    <operation type="repository" reflect="whatever" 
+       directory="/blah/blah/blah" file="blah.pl" 
+       action="promote" \>
+  </query>
+
+  <!-- 
+     This transaction would indicate that the file 
+     /blah/blah/blah/blah.password is one of the files set up in the IGNORE
+     database as one of the files we never want included in the repository.
+  -->
+  <query type="plain" directory="/blah/blah/blah" file="blah.password" 
+     MD5="1f5992a95b47b11a74f3422895e90586" check="standard" 
+     reflect="whatever" >
+    <response reflect="whatever" type="IGNORE" \>
+  </query>
+
+  <!-- 
+     This transaction would indicate that the file 
+     /blah/blah/blah/blah.bmp matches one of the IGNORE regular expressions
+     set up in the configuration XML file.
+  -->
+  <query type="plain" directory="/blah/blah/blah" file="blah.bmp" 
+     MD5="5b3115c746df1ff9a4ad2a41f2491ff1" check="standard" 
+     reflect="whatever" >
+    <response reflect="whatever" type="IGNORE_RE" \>
+  </query>
+</ingest>
+
+
+
+
