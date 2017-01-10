@@ -60,7 +60,7 @@ GNUDB Files
     sees this file, it will igniore it and not check it further.
 2.  TRACKED: This Key value pair file tells us if we currently have the file 
     in our repository.  In each case, the key is the prefix + fully qualified
-    name (FQN) and the value is a hardcoded 1.  
+    name (FQN) and the value is the repository abbreviation.  
 3.  MD5:  This key value pair tracks all of the MD5 checksums within the 
     repository.  The key is the 32 hex character MD5 while the value is the 
     prefix+FQN with an appended build_id if appropriate.
